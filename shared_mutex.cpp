@@ -17,6 +17,9 @@ SharedMutex::f_policy SharedMutex::getReadPolicy(PreferencePolicy policy){
 			if(_mutex->_exclusive_acquired) return false;			
 			return ((_mutex->_readers + _mutex->_writers) == 0); 
 		}; 
+		/*
+		FOR NONE all readers we can get
+		*/
                 case PreferencePolicy::NONE: return [](SharedMutex* _mutex, uint32_t thread_uid){
 			if(_mutex->_exclusive_acquired) return false;
 			return true;			 
@@ -46,6 +49,9 @@ SharedMutex::f_policy SharedMutex::getWritePolicy(PreferencePolicy policy){
 			if(_mutex->_exclusive_acquired) return false;			
 			return ((_mutex->_readers + _mutex->_writers) == 0); 
 		}; 
+		/*
+		FOR NONE Maximum 4 writers
+		*/
                 case PreferencePolicy::NONE: return [](SharedMutex* _mutex, uint32_t thread_uid){
 			if(_mutex->_exclusive_acquired) return false;
 			if(_mutex->_writers >= 4) return false;

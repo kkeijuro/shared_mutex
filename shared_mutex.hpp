@@ -23,22 +23,24 @@ class SharedMutex {
 	void exclusiveLock();
 	bool tryExclusiveLock();
 	void exclusiveUnlock();
-	void rSharedLock(uint32_t thread_id);
 	void rSharedLock();
 	bool rTrySharedLock();
 	void rSharedUnlock();
-	void wSharedLock(uint32_t thread_id);
 	void wSharedLock();
 	bool wTrySharedLock();
 	void wSharedUnlock();
 	void registerThread(uint32_t thread_id);
 	uint32_t getNumberWriters() const;
-	uint32_t getNumberReaders() const;	
+	uint32_t getNumberReaders() const;
+	//Just wanted to test a Round Robin
+	void rSharedLock(uint32_t thread_id);
+	void wSharedLock(uint32_t thread_id);	
 	private:
 	//void sharedLock(){};
 	//bool trySharedLock(){};
 	//void sharedUnlock(){};
 	//
+	//Also Round Robin
 	uint32_t getActualTurn();
 	typedef std::function<bool(SharedMutex*, int32_t thread_id)> f_policy;
 	static SharedMutex::f_policy getReadPolicy(PreferencePolicy policy);

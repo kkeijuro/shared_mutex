@@ -13,7 +13,7 @@ uint32_t MemorySpace::DEFAULT_SIZE = 1024*10000; //100 k
 static MemorySpace* _memory_space = NULL;
 
 uint32_t MemorySpace::_RSLEEP = 5*1000; //5 ms
-uint32_t MemorySpace::_WSLEEP = 5*1000; // 1 ms
+uint32_t MemorySpace::_WSLEEP = 5*1000; //5 ms
 
 MemorySpace* get_memory_space() {
 	if(_memory_space == NULL) _memory_space = new MemorySpace();
