@@ -11,6 +11,7 @@ SharedMutex::SharedMutex(PreferencePolicy policy):  _exclusive_acquired(false), 
 	this->_write_policy = SharedMutex::getWritePolicy(policy);
 };
 
+/*Abstraction for pluging in Read Policy*/
 SharedMutex::f_policy SharedMutex::getReadPolicy(PreferencePolicy policy){
 	switch(policy) {
 		case PreferencePolicy::XCLUSIVE: return [](SharedMutex* _mutex, uint32_t thread_uid){
@@ -29,11 +30,18 @@ SharedMutex::f_policy SharedMutex::getReadPolicy(PreferencePolicy policy){
 			if(thread_uid == 0) return (_mutex->_readers + _mutex->_writers) == 0;
 			return (((_mutex->_readers + _mutex->_writers) == 0) && (_mutex->getActualTurn() == thread_uid));
 		};
+		/*If a reader already holds a shared lock, 
+		any writers will wait until all current and future readers have finished
+		*/
 		case PreferencePolicy::READER: return [](SharedMutex* _mutex, uint32_t thread_uid){
 			if(_mutex->_exclusive_acquired) return false;
 			//if(_mutex->_writers > 0) return false;			
 			return true;
 		};
+
+	        /*If a reader already holds a shared lock, 
+		no additional readers will acquire until all writers have finished
+		*/
 		case PreferencePolicy::WRITER: return [](SharedMutex* _mutex, uint32_t thread_uid){		
 			if(_mutex->_exclusive_acquired) return false;
 			if((_mutex->_readers == 0) || (_mutex->_writers == 0)) return true;			
@@ -42,7 +50,7 @@ SharedMutex::f_policy SharedMutex::getReadPolicy(PreferencePolicy policy){
 	}
 };
 
-
+/*Abstraction for pluging in Write Policy*/
 SharedMutex::f_policy SharedMutex::getWritePolicy(PreferencePolicy policy){
 	switch(policy) {
 		case PreferencePolicy::XCLUSIVE: return [](SharedMutex* _mutex, uint32_t thread_uid){
@@ -62,17 +70,23 @@ SharedMutex::f_policy SharedMutex::getWritePolicy(PreferencePolicy policy){
 			if(thread_uid == 0) return (_mutex->_readers + _mutex->_writers) == 0;
 			return (((_mutex->_readers + _mutex->_writers) == 0) && (_mutex->getActualTurn() == thread_uid));
 		};
+		/*If a reader already holds a shared lock, 
+		any writers will wait until all current and future readers have finished
+		*/		
 		case PreferencePolicy::READER: return [](SharedMutex* _mutex, uint32_t thread_uid){
 			if(_mutex->_exclusive_acquired) return false;
 			if(_mutex->_readers == 0) return true;
 			return false;
 		};
+	        /*If a reader already holds a shared lock, 
+		no additional readers will acquire until all writers have finished
+		*/
 		case PreferencePolicy::WRITER: return [](SharedMutex* _mutex, uint32_t thread_uid){								
 			if(_mutex->_exclusive_acquired) return false;
-			if(_mutex->_readers > 1) return false;
+			//if(_mutex->_readers > 1) return false;
 			return true;		
 		};
-	}
+	};
 };
 
 uint32_t SharedMutex::getNumberWriters() const{
