@@ -1,0 +1,45 @@
+I'd like to see you pull together a shared lock implementation out of:
+
+    std::mutex
+    std::condition_variable
+
+And I'd like you to avoid using std::shared_mutex in your implementation
+
+I'd also like to see pluggable policies:
+
+    prefer readers
+        If a reader already holds a shared lock, any writers will wait until all current and future readers have finished
+
+    prefer writers
+        If a reader already holds a shared lock, no additional readers will acquire until all writers have finished
+
+    prefer neither
+        readers and writers acquire the lock in whatever way best guarantees efficient forward progress
+
+I'm looking for something with a signature like:
+
+    enum class PreferencePolicy {
+      Reader,
+      Writer,
+      None,
+    };
+
+    template <PreferencePolicy policy>
+    class SharedMutex {
+      void exclusiveLock();
+      bool tryExclusiveLock();
+      void exclusiveUnlock();
+      void sharedLock();
+      bool trySharedLock();
+      void sharedUnlock();
+    };
+
+
+With the semantics that:
+
+    Any number of threads may hold the sharedLock simultaneously.  If any other thread holds the exclusiveLock, no sharedLocks may be held.
+    Only one thread may hold the exclusiveLock at once.
+
+And I'd like to see tests that demonstrate that each policy is actually getting followed.
+
+
