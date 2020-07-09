@@ -3,7 +3,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <vector>
-#include "access_objects.hpp"
+#include "test_objects.hpp"
 #include "shared_mutex.hpp"
 
 std::vector<Writer*>& createNWriters(SharedMutex& shared_mutex, uint8_t n) {
