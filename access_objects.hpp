@@ -48,7 +48,7 @@ class Reader {
 	public:
 	Reader(SharedMutex* shared_mutex);
 	void readContinously();
-	void punctualRead();
+	size_t punctualRead(uint8_t* buffer, size_t lenght);
 	void stop();
 	private:
 	MemorySpace* _memory_space;

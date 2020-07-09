@@ -1,7 +1,9 @@
 #include <condition_variable>
 #include <functional>
 #include <mutex>
+#include <set>
 #include <stdint.h>
+#include <thread>
 #include <vector>
 
 #pragma once
@@ -22,12 +24,15 @@ class SharedMutex {
 	
 	void exclusiveLock();
 	bool tryExclusiveLock();
+	bool tryExclusiveLock(uint16_t timeout);
 	void exclusiveUnlock();
 	void rSharedLock();
 	bool rTrySharedLock();
+	bool rTrySharedLock(uint16_t timeout);
 	void rSharedUnlock();
 	void wSharedLock();
 	bool wTrySharedLock();
+	bool wTrySharedLock(uint16_t timeout);
 	void wSharedUnlock();
 	void registerThread(uint32_t thread_id);
 	uint32_t getNumberWriters() const;
@@ -40,11 +45,13 @@ class SharedMutex {
 	//bool trySharedLock(){};
 	//void sharedUnlock(){};
 	//
-	//Also Round Robin
+	//Also for Round Robin
 	uint32_t getActualTurn();
+	
 	typedef std::function<bool(SharedMutex*, int32_t thread_id)> f_policy;
 	static SharedMutex::f_policy getReadPolicy(PreferencePolicy policy);
 	static SharedMutex::f_policy getWritePolicy(PreferencePolicy policy);
+	bool _checkThreadRunnable();
 	std::condition_variable _cv;
 	bool _exclusive_acquired;
 	SharedMutex::f_policy _read_policy;
@@ -52,7 +59,9 @@ class SharedMutex {
 	std::mutex _mutex;
 	std::mutex _try_mutex;
 	std::vector<uint32_t> _round_robin_turn;
+	std::set<std::thread::id> _threads_running;
 	uint32_t _readers;
+	uint32_t _future_readers;
 	uint32_t _writers;
 	uint32_t _turn;
 };

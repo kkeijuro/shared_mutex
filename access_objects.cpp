@@ -116,13 +116,12 @@ void Reader::continousRead(){
 		_memory_space->read(buffer, size);
 		//std::cout<<"Readed: "<< size<<" with: "<<_mutex->getNumberReaders() <<" Readers "<<_mutex->getNumberWriters() <<" Writers"<<std::endl;
 		_mutex->rSharedUnlock();
+		usleep(5*1000);
 	}
 };
 
-void Reader::punctualRead(){
+size_t Reader::punctualRead(uint8_t* buffer, size_t size){
 	_mutex->rSharedLock(_thread_uid);
-	size_t size = _memory_space->getSize();
-	uint8_t* buffer = new uint8_t[size];		
 	_memory_space->read(buffer, size);
 	_mutex->rSharedUnlock();
 };
@@ -163,7 +162,7 @@ void Writer::continousWrite(){
 		_mutex->wSharedLock(this->_thread_uid);
 		_memory_space->write(buffer, size);
 		_mutex->wSharedUnlock();
-		//usleep(50*1000);
+		usleep(5*1000);
 	}
 	delete[] buffer;
 };
