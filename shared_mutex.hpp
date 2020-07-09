@@ -39,11 +39,12 @@ class SharedMutex {
 	bool wTrySharedLock();
 	bool wTrySharedLock(uint16_t timeout);
 	void wSharedUnlock();
-	void registerThread(uint32_t thread_id);
+
 	uint32_t getNumberWriters() const;
 	uint32_t getNumberReaders() const;
 
 	//Just wanted to test a Round Robin
+	void registerThread(uint32_t thread_id);
 	void rSharedLock(uint32_t thread_id);
 	void wSharedLock(uint32_t thread_id);	
 	private:
