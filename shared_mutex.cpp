@@ -217,7 +217,7 @@ bool SharedMutex::wTrySharedLock(uint16_t timeout){
 
 void SharedMutex::wSharedUnlock(){
 	std::unique_lock<std::mutex> lk(_mutex);
-	_writers -= 1;
+	_writers--;
 	_threads_running.erase(std::this_thread::get_id());
 	_cv.notify_all();
 };

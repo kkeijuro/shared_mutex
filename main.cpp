@@ -54,9 +54,11 @@ void testRoundRobin() {
 	auto memory = get_memory_space();
 	memory->restartMemory();
 	SharedMutex _shared_mutex(PreferencePolicy::ROUNDROBIN);
-	auto writers_vector = createNWriters(_shared_mutex, 3);
+	auto writers_vector = createNWriters(_shared_mutex, 5);
 	writers_vector.operator[](1)->setDataGenerator(new CharDataGenerator('b'));
 	writers_vector.operator[](2)->setDataGenerator(new CharDataGenerator('c'));
+	writers_vector.operator[](3)->setDataGenerator(new CharDataGenerator('d'));
+	writers_vector.operator[](4)->setDataGenerator(new CharDataGenerator('e'));
 	startWriters(writers_vector);
 	usleep(5*1000000);
 	stopWriters(writers_vector);
