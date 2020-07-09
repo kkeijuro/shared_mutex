@@ -241,6 +241,39 @@ bool testReadAccess() {
 	return ret;
 };
 
+bool testWriteAccess() {
+	/*
+	Test same Read thread trying to acquire twice the same lock
+	*/
+	bool ret = false;
+	SharedMutex _shared_mutex(PreferencePolicy::NONE);
+	_shared_mutex.wSharedLock();
+	_shared_mutex.wSharedUnlock();
+	_shared_mutex.wSharedLock();	
+	try {
+		_shared_mutex.exclusiveLock();
+		ret = false;
+	}
+	catch (...) {
+		ret = true;
+	}
+	try {
+		_shared_mutex.rSharedLock();
+		ret = false;
+	}
+	catch (...) {
+		ret = true;
+	}
+	try {
+		_shared_mutex.wSharedLock();
+		ret = false;
+	}
+	catch (...) {
+		ret = true;
+	}
+	_shared_mutex.wSharedUnlock();
+	return ret;
+};
 
 bool testExclusiveAccess() {
 	/*
@@ -286,6 +319,10 @@ int main() {
 
 	std::cout<<"Test READ Access: "<<std::endl;
 	passed = testReadAccess();	
+	std::cout<<"Passed: "<<std::boolalpha<<passed<<std::endl;
+
+	std::cout<<"Test WRITE Access: "<<std::endl;
+	passed = testWriteAccess();	
 	std::cout<<"Passed: "<<std::boolalpha<<passed<<std::endl;
 
 	std::cout<<"Test WRITE Prevalence No exclusive: "<<std::endl;
