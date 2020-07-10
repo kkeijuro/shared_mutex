@@ -42,22 +42,26 @@ class SharedMutex {
 
 	uint32_t getNumberWriters() const;
 	uint32_t getNumberReaders() const;
+	uint32_t getNumberFutureReaders() const;
 
 	//Just wanted to test a Round Robin
-	void registerThread(uint32_t thread_id);
-	void rSharedLock(uint32_t thread_id);
-	void wSharedLock(uint32_t thread_id);	
+	void registerThread();
+	void unregisterThread();
+	//void rSharedLock(uint32_t thread_id);
+	//void wSharedLock(uint32_t thread_id);
+	static void setLimitReaders(uint16_t limit_readers);	
 	private:
 	//void sharedLock(){};
 	//bool trySharedLock(){};
 	//void sharedUnlock(){};
 	//
 	//Also for Round Robin
-	uint32_t getActualTurn();
+	std::thread::id getActualTurn();
 	
-	typedef std::function<bool(SharedMutex*, int32_t thread_id)> f_policy;
+	typedef std::function<bool(SharedMutex*)> f_policy;
 	static SharedMutex::f_policy getReadPolicy(PreferencePolicy policy);
 	static SharedMutex::f_policy getWritePolicy(PreferencePolicy policy);
+	static uint16_t _limit_readers;
 	bool _checkThreadRunnable();
 	std::condition_variable _cv;
 	bool _exclusive_acquired;
@@ -65,11 +69,12 @@ class SharedMutex {
 	SharedMutex::f_policy _write_policy;
 	std::mutex _mutex;
 	std::mutex _try_mutex;
-	std::vector<uint32_t> _round_robin_turn;
+	std::mutex _register_mutex;
+	std::vector<std::thread::id> _round_robin_turn;
 	//We save actual threads ID to avoid thread lock reuse which cause deadlock
 	std::set<std::thread::id> _threads_running;
 	uint32_t _readers;
 	uint32_t _future_readers;
 	uint32_t _writers;
-	uint32_t _turn;
+	int32_t _turn;
 };

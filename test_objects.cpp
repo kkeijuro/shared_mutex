@@ -81,24 +81,15 @@ size_t CharDataGenerator::getData(uint8_t* data){
 	return 1;
 };
 
-
-static uint32_t thread_uid = 0;
-static uint32_t get_thread_uid() {
-	thread_uid++;
-	return thread_uid;
-};
-
 /*
 READER
 */
 
 Reader::Reader(SharedMutex* shared_mutex): _mutex(shared_mutex), _out(false){
 	_memory_space = get_memory_space();
-	_thread_uid = get_thread_uid();
 };
 
 void Reader::readContinously() {
-	_mutex->registerThread(this->_thread_uid);
 	_thread = new std::thread(&Reader::continousRead, this);        
 };
 
@@ -109,19 +100,20 @@ void Reader::stop() {
 };
 
 void Reader::continousRead(){
+	_mutex->registerThread();
 	while(!_out) {
-		_mutex->rSharedLock(_thread_uid);
+		_mutex->rSharedLock();
 		size_t size = _memory_space->getSize();
 		uint8_t* buffer = new uint8_t[size];		
 		_memory_space->read(buffer, size);
-		//std::cout<<"Readed: "<< size<<" with: "<<_mutex->getNumberReaders() <<" Readers "<<_mutex->getNumberWriters() <<" Writers"<<std::endl;
 		_mutex->rSharedUnlock();
 		usleep(5*1000);
 	}
+	_mutex->unregisterThread();
 };
 
 size_t Reader::punctualRead(uint8_t* buffer, size_t size){
-	_mutex->rSharedLock(_thread_uid);
+	_mutex->rSharedLock();
 	_memory_space->read(buffer, size);
 	_mutex->rSharedUnlock();
 };
@@ -133,7 +125,6 @@ WRITER
 Writer::Writer(SharedMutex* shared_mutex): _mutex(shared_mutex), _out (false){
 	_data_generator = new CharDataGenerator('a');
 	_memory_space = get_memory_space();
-	_thread_uid = get_thread_uid();
 };
 
 
@@ -150,19 +141,20 @@ void Writer::stop(){
 };
 
 void Writer::writeContinously() {
-	_mutex->registerThread(this->_thread_uid);
 	_thread = new std::thread(&Writer::continousWrite, this);
 };
 
 void Writer::continousWrite(){
 	uint8_t* buffer = new uint8_t[15];
+	_mutex->registerThread();	
 	while(!_out) {
 		size_t size = _data_generator->getData(buffer);
 		//std::cout<<"Writing: "<< buffer<<std::endl;
-		_mutex->wSharedLock(this->_thread_uid);
+		_mutex->wSharedLock();
 		_memory_space->write(buffer, size);
 		_mutex->wSharedUnlock();
 		usleep(5*1000);
 	}
+	_mutex->unregisterThread();	
 	delete[] buffer;
 };

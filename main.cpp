@@ -6,7 +6,7 @@
 #include "test_objects.hpp"
 #include "shared_mutex.hpp"
 
-std::vector<Writer*>& createNWriters(SharedMutex& shared_mutex, uint8_t n) {
+std::vector<Writer*>& createNWriters(SharedMutex& shared_mutex, uint16_t n) {
 	std::vector<Writer*>* w_vector = new std::vector<Writer*>(n);  
 	for(uint8_t index = 0; index < n; index++) w_vector->operator[](index) = new Writer(&shared_mutex);
 	return *w_vector;
@@ -22,7 +22,7 @@ void stopWriters(std::vector<Writer*>& writers) {
 };
 
 
-std::vector<Reader*>& createNReaders(SharedMutex& shared_mutex, uint8_t n) {
+std::vector<Reader*>& createNReaders(SharedMutex& shared_mutex, uint16_t n) {
 	std::vector<Reader*>* r_vector = new std::vector<Reader*>(n);  
 	for(uint8_t index = 0; index<n; index++) r_vector->operator[](index) = new Reader(&shared_mutex);
 	return *r_vector;
@@ -311,9 +311,26 @@ bool testExclusiveAccess() {
 	return ret;
 };
 
+
+bool testLimitReaders(int limit_readers) {
+	bool ret = true;
+	SharedMutex _shared_mutex(PreferencePolicy::NONE);
+	SharedMutex::setLimitReaders(limit_readers);
+	auto readers_vector = createNReaders(_shared_mutex, 50);
+	usleep(1*1000000);//1 Second
+	startReaders(readers_vector);
+	for(uint16_t index = 0; index < 10; index++) {
+		std::cout<<"\tReaders: "<<_shared_mutex.getNumberReaders()<<" Future Readers: "<< _shared_mutex.getNumberFutureReaders()<<std::endl;
+		usleep(1*1000000);//1 Second
+		if(_shared_mutex.getNumberReaders() > limit_readers) ret = false;
+	}
+	stopReaders(readers_vector);
+	SharedMutex::setLimitReaders(0);
+	return ret;
+};
+
 int main() {
-	//testSimpleWriters();
-	//testRoundRobin();
+
 	bool passed;
 	std::cout<<"Test Xclusive Access: "<<std::endl;
 	passed = testExclusiveAccess();	
@@ -342,7 +359,10 @@ int main() {
 	std::cout<<"Test Xclusive Thread: "<<std::endl;
 	passed = testExclusiveThread();
 	std::cout<<"Passed: "<<std::boolalpha<< passed<<std::endl;
-	
-	testRoundRobin();
-	
+
+	std::cout<<"Test Limit Readers: "<<std::endl;
+	passed = testLimitReaders(20);
+	std::cout<<"Passed: "<<std::boolalpha<< passed<<std::endl;
+
+	testRoundRobin();	
 };
