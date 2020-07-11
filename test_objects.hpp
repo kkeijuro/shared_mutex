@@ -51,6 +51,7 @@ class Reader {
 	size_t punctualRead(uint8_t* buffer, size_t lenght);
 	void stop();
 	private:
+	static uint32_t _SLEEP;
 	MemorySpace* _memory_space;
 	SharedMutex* _mutex;
 	bool _out;
@@ -69,6 +70,7 @@ class Writer {
 	void stop();
 	void writeContinously();
 	private:
+	static uint32_t _SLEEP;
 	DataGenerator* _data_generator;
 	MemorySpace* _memory_space;
 	SharedMutex* _mutex;

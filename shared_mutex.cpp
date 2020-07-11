@@ -149,25 +149,6 @@ void SharedMutex::exclusiveUnlock() {
 	_cv.notify_all();
 };
 
-std::thread::id SharedMutex::getActualTurn(){
-	std::unique_lock<std::mutex> lk(_register_mutex);
-	return _round_robin_turn.operator[](_turn);
-};
-
-/*Just for test the ROUND ROBIN*/
-void SharedMutex::registerThread(){
-	std::unique_lock<std::mutex> lk(_register_mutex);
-	_round_robin_turn.push_back(std::this_thread::get_id());
-};
-
-void SharedMutex::unregisterThread(){
-	std::unique_lock<std::mutex> lk(_register_mutex);
-	_round_robin_turn.erase(std::remove(_round_robin_turn.begin(), _round_robin_turn.end(), std::this_thread::get_id()), _round_robin_turn.end());
-	_turn--;
-	if(_turn < 0) _turn = 0;
-};
-
-
 void SharedMutex::rSharedLock(){
 	if(!_checkThreadRunnable()) throw std::runtime_error("Unable to relock thread");
 	std::unique_lock<std::mutex> lk(_mutex);
@@ -235,3 +216,24 @@ void SharedMutex::wSharedUnlock(){
 	_threads_running.erase(std::this_thread::get_id());
 	_cv.notify_all();
 };
+
+
+/*Just for ROUND ROBIN*/
+std::thread::id SharedMutex::getActualTurn(){
+	std::unique_lock<std::mutex> lk(_register_mutex);
+	return _round_robin_turn.operator[](_turn);
+};
+
+void SharedMutex::registerThread(){
+	std::unique_lock<std::mutex> lk(_register_mutex);
+	_round_robin_turn.push_back(std::this_thread::get_id());
+};
+
+void SharedMutex::unregisterThread(){
+	std::unique_lock<std::mutex> lk(_register_mutex);
+	_round_robin_turn.erase(std::remove(_round_robin_turn.begin(), _round_robin_turn.end(), std::this_thread::get_id()), _round_robin_turn.end());
+	//Avoid loosing order when a element is removed	
+	_turn--;
+	if(_turn < 0) _turn = 0;
+};
+

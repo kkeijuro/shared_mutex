@@ -37,6 +37,7 @@ std::ostream& operator<<(std::ostream& os, const MemorySpace& memory) {
 		os<<std::endl;
 		index += 10;
 	}
+	os<<std::dec;
 	return os;
 };
 
@@ -57,6 +58,7 @@ size_t MemorySpace::read(uint8_t* buffer, size_t size) {
 		memcpy(buffer, _memory_space + _rw_position - size, size);
 		//_rw_position -= size;
 	}
+	//Simulate X time on non shared resource
 	usleep(MemorySpace::_RSLEEP);
 	return size;
 };
@@ -69,6 +71,7 @@ size_t MemorySpace::write(uint8_t* buffer, size_t size) {
 		memcpy(_memory_space + _rw_position, buffer, size);
 		_rw_position += size;
 		}
+	//Simulate X time on non shared resource
 	usleep(MemorySpace::_WSLEEP);
 	return size;
 };
@@ -84,6 +87,7 @@ size_t CharDataGenerator::getData(uint8_t* data){
 /*
 READER
 */
+uint32_t Reader::_SLEEP = 1*1000;
 
 Reader::Reader(SharedMutex* shared_mutex): _mutex(shared_mutex), _out(false){
 	_memory_space = get_memory_space();
@@ -94,6 +98,7 @@ void Reader::readContinously() {
 };
 
 void Reader::stop() {
+	if (_thread == NULL and !_thread->joinable()) return;
 	_out = true;
 	_thread->join();
 	_out = false;
@@ -107,7 +112,7 @@ void Reader::continousRead(){
 		uint8_t* buffer = new uint8_t[size];		
 		_memory_space->read(buffer, size);
 		_mutex->rSharedUnlock();
-		usleep(5*1000);
+		usleep(Reader::_SLEEP);
 	}
 	_mutex->unregisterThread();
 };
@@ -121,10 +126,12 @@ size_t Reader::punctualRead(uint8_t* buffer, size_t size){
 /*
 WRITER
 */
+uint32_t Writer::_SLEEP = 5*1000;
 
 Writer::Writer(SharedMutex* shared_mutex): _mutex(shared_mutex), _out (false){
 	_data_generator = new CharDataGenerator('a');
 	_memory_space = get_memory_space();
+	_thread = NULL;
 };
 
 
@@ -134,6 +141,7 @@ void Writer::setDataGenerator(DataGenerator* data_generator){
 };
 
 void Writer::stop(){
+	if (_thread == NULL and !_thread->joinable()) return;
 	_out = true;
 	_thread->join();
 	delete _thread;
@@ -153,7 +161,7 @@ void Writer::continousWrite(){
 		_mutex->wSharedLock();
 		_memory_space->write(buffer, size);
 		_mutex->wSharedUnlock();
-		usleep(5*1000);
+		usleep(Writer::_SLEEP);
 	}
 	_mutex->unregisterThread();	
 	delete[] buffer;

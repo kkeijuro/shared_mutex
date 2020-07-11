@@ -165,9 +165,9 @@ bool testWritePrevalenceNoExclusive() {
 
 bool testExclusiveThread() {
 	/*
-	N writers launched, check that memory is being writed
+	N writers launched, check that memory is being wrote
 	begin exclusive thread: check that memory doesnt grow
-	stop exclusive thread: check that memory keeps growing
+	stop exclusive thread: check that memory written keeps growing
 	*/
 	auto memory = get_memory_space();
 	memory->restartMemory();
@@ -209,6 +209,23 @@ bool testExclusiveThread() {
 	return ret;
 };
 
+bool testLimitReaders(int limit_readers) {
+	bool ret = true;
+	SharedMutex _shared_mutex(PreferencePolicy::NONE);
+	SharedMutex::setLimitReaders(limit_readers);
+	auto readers_vector = createNReaders(_shared_mutex, 50);
+	usleep(1*1000000);//1 Second
+	startReaders(readers_vector);
+	for(uint16_t index = 0; index < 10; index++) {
+		std::cout<<"\tReaders: "<<_shared_mutex.getNumberReaders()<<" Future Readers: "<< _shared_mutex.getNumberFutureReaders()<<std::endl;
+		usleep(1*1000000);//1 Second
+		if(_shared_mutex.getNumberReaders() > limit_readers) ret = false;
+	}
+	stopReaders(readers_vector);
+	SharedMutex::setLimitReaders(0);
+	return ret;
+};
+
 bool testReadAccess() {
 	/*
 	Test same Read thread trying to acquire twice the same lock
@@ -245,7 +262,7 @@ bool testReadAccess() {
 
 bool testWriteAccess() {
 	/*
-	Test same Read thread trying to acquire twice the same lock
+	Test same Write thread trying to acquire twice the same lock
 	*/
 	bool ret = false;
 	SharedMutex _shared_mutex(PreferencePolicy::NONE);
@@ -279,7 +296,7 @@ bool testWriteAccess() {
 
 bool testExclusiveAccess() {
 	/*
-	Test same Write thread trying to acquire twice the same lock
+	Test same Exclusive thread trying to acquire twice the same lock
 	*/
 	bool ret = false;
 	SharedMutex _shared_mutex(PreferencePolicy::NONE);
@@ -308,24 +325,6 @@ bool testExclusiveAccess() {
 		ret = true;
 	}
 	_shared_mutex.exclusiveUnlock();
-	return ret;
-};
-
-
-bool testLimitReaders(int limit_readers) {
-	bool ret = true;
-	SharedMutex _shared_mutex(PreferencePolicy::NONE);
-	SharedMutex::setLimitReaders(limit_readers);
-	auto readers_vector = createNReaders(_shared_mutex, 50);
-	usleep(1*1000000);//1 Second
-	startReaders(readers_vector);
-	for(uint16_t index = 0; index < 10; index++) {
-		std::cout<<"\tReaders: "<<_shared_mutex.getNumberReaders()<<" Future Readers: "<< _shared_mutex.getNumberFutureReaders()<<std::endl;
-		usleep(1*1000000);//1 Second
-		if(_shared_mutex.getNumberReaders() > limit_readers) ret = false;
-	}
-	stopReaders(readers_vector);
-	SharedMutex::setLimitReaders(0);
 	return ret;
 };
 
