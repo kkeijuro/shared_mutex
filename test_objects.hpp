@@ -30,6 +30,7 @@ MemorySpace* get_memory_space();
 class DataGenerator {
 	public:
 	virtual size_t getData(uint8_t* data) = 0;
+	virtual ~DataGenerator(){};
 };
 
 class CharDataGenerator: public DataGenerator {

@@ -8,10 +8,11 @@
 
 using namespace std::chrono;
 
+const int32_t SharedMutex::NO_LIMIT_READERS = -1;
 
-uint16_t SharedMutex::_limit_readers = 0;
+int32_t SharedMutex::_limit_readers = SharedMutex::NO_LIMIT_READERS;
 
-void SharedMutex::setLimitReaders(uint16_t limit_readers) {
+void SharedMutex::setLimitReaders(int32_t limit_readers) {
 	SharedMutex::_limit_readers = limit_readers;
 };
 
@@ -25,7 +26,7 @@ SharedMutex::f_policy SharedMutex::getReadPolicy(PreferencePolicy policy){
 	switch(policy) {
 		case PreferencePolicy::XCLUSIVE: return [](SharedMutex* _mutex){
 			if(_mutex->_exclusive_acquired) return false;
-			if(_limit_readers and _limit_readers >= _mutex->_readers) return false;			
+			if(SharedMutex::_limit_readers != SharedMutex::NO_LIMIT_READERS and _limit_readers >= _mutex->_readers) return false;			
 			return ((_mutex->_readers + _mutex->_writers) == 0); 
 		}; 
 		/*
@@ -34,21 +35,20 @@ SharedMutex::f_policy SharedMutex::getReadPolicy(PreferencePolicy policy){
                 case PreferencePolicy::NONE: return [](SharedMutex* _mutex){
 			if(_mutex->_exclusive_acquired) return false;
 			if(_mutex->_writers > 0) return false;
-			if(_limit_readers and _mutex->_readers >= _limit_readers) return false;
+			if(SharedMutex::_limit_readers != SharedMutex::NO_LIMIT_READERS and _mutex->_readers >= _limit_readers) return false;
 			return true;			 
 		}; 
 		case PreferencePolicy::ROUNDROBIN: return [](SharedMutex* _mutex){
 			if(_mutex->_exclusive_acquired) return false;			
-			if(_limit_readers and _limit_readers >= _mutex->_readers) return false;
-			return (((_mutex->_readers + _mutex->_writers) == 0) && (_mutex->getActualTurn() == std::this_thread::get_id()));
+			if(SharedMutex::_limit_readers != SharedMutex::NO_LIMIT_READERS and _mutex->_readers >= _limit_readers) return false;
+			return (((_mutex->_readers + _mutex->_writers) == 0) and (_mutex->getActualTurn() == std::this_thread::get_id()));
 		};
 		/*If a reader already holds a shared lock, 
 		any writers will wait until all current and future readers have finished
 		*/
 		case PreferencePolicy::READER: return [](SharedMutex* _mutex){
 			if(_mutex->_exclusive_acquired) return false;
-			if(_limit_readers and _limit_readers >= _mutex->_readers) return false;
-			//if(_mutex->_writers > 0) return false;			
+			if(SharedMutex::_limit_readers != SharedMutex::NO_LIMIT_READERS and _mutex->_readers >= _limit_readers) return false;		
 			return true;
 		};
 
@@ -57,8 +57,13 @@ SharedMutex::f_policy SharedMutex::getReadPolicy(PreferencePolicy policy){
 		*/
 		case PreferencePolicy::WRITER: return [](SharedMutex* _mutex){		
 			if(_mutex->_exclusive_acquired) return false;
-			if((_mutex->_readers == 0) and (_mutex->_writers == 0)) return true;			
-			return false;		
+			if(SharedMutex::_limit_readers != SharedMutex::NO_LIMIT_READERS and _mutex->_readers >= _limit_readers) return false;
+			if((_mutex->_readers >= 1) and (_mutex->_writers > 0)) return false;
+			return true;		
+		};
+		/* default is freeride but clearly will never reach this point*/
+		default: return [](SharedMutex* _mutex){		
+			return true;		
 		};
 	}
 };
@@ -98,6 +103,10 @@ SharedMutex::f_policy SharedMutex::getWritePolicy(PreferencePolicy policy){
 			//if(_mutex->_readers > 1) return false;
 			return true;		
 		};
+		/* default is freeride but clearly will never reach this point*/
+		default: return [](SharedMutex* _mutex){		
+			return true;		
+		};
 	};
 };
 
@@ -118,7 +127,7 @@ bool SharedMutex::_checkThreadRunnable() {
 		return false;
 	}
 	return true;
-}
+};
 
 void SharedMutex::exclusiveLock() {
 	if(!_checkThreadRunnable()) throw std::runtime_error("Unable to relock thread");

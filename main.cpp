@@ -141,11 +141,12 @@ bool testWritePrevalenceNoExclusive() {
 	reader_1.readContinously();
 	for(uint16_t index = 0; index < 20; index++) {
 		if(_shared_mutex.rTrySharedLock(100) == true) {		
-			if(_shared_mutex.getNumberReaders() > 1) {
+			if(_shared_mutex.getNumberReaders() > 1 and _shared_mutex.getNumberWriters() != 0) {
 				std::cout<<"\tAcquiring lock when Unable"<<std::endl;			
 				ret = false;
 			}
-			else std::cout<<"\tLock acquired but only one reader"<<std::endl;			
+			else std::cout<<"\tLock acquired but: "<<"Writers: "<<_shared_mutex.getNumberWriters()
+								<<" Readers: "<< _shared_mutex.getNumberReaders()<<std::endl;			
 			_shared_mutex.rSharedUnlock();
 			usleep(1*(500000));// 0.5 seconds
 		}
@@ -209,13 +210,13 @@ bool testExclusiveThread() {
 	return ret;
 };
 
-bool testLimitReaders(int limit_readers) {
+bool testLimitReaders(uint32_t limit_readers) {
 	bool ret = true;
 	SharedMutex _shared_mutex(PreferencePolicy::NONE);
 	SharedMutex::setLimitReaders(limit_readers);
 	auto readers_vector = createNReaders(_shared_mutex, 50);
-	usleep(1*1000000);//1 Second
 	startReaders(readers_vector);
+	usleep(1*1000000);//1 Second
 	for(uint16_t index = 0; index < 10; index++) {
 		std::cout<<"\tReaders: "<<_shared_mutex.getNumberReaders()<<" Future Readers: "<< _shared_mutex.getNumberFutureReaders()<<std::endl;
 		usleep(1*1000000);//1 Second
@@ -223,6 +224,33 @@ bool testLimitReaders(int limit_readers) {
 	}
 	stopReaders(readers_vector);
 	SharedMutex::setLimitReaders(0);
+	return ret;
+};
+
+bool testFutureReadersBlocksWriter() {
+	bool ret = true;
+	SharedMutex _shared_mutex(PreferencePolicy::READER);
+	//Create a bottleneck. With lots of waiting readers
+	SharedMutex::setLimitReaders(0);
+	auto readers_vector = createNReaders(_shared_mutex, 1);
+	startReaders(readers_vector);
+	usleep(1*1000000);//1 Second
+	for(uint16_t index = 0; index < 20; index++) {
+		if(_shared_mutex.wTrySharedLock() == true) {
+			ret = false;				
+			std::cout<<"\tAcquiring lock when Unable: "<<" Number of readers: "<<_shared_mutex.getNumberReaders()
+				<<" Future Readers: " << _shared_mutex.getNumberFutureReaders() <<std::endl;
+			_shared_mutex.wSharedUnlock();
+		}
+		else 
+			std::cout<<"\tNot Acquiring: "<<" Number of readers: "<<_shared_mutex.getNumberReaders()
+				<<" Future Readers: " << _shared_mutex.getNumberFutureReaders() <<std::endl;
+		usleep(1*(500000)); // 1/2 Sec
+	}
+	SharedMutex::setLimitReaders(SharedMutex::NO_LIMIT_READERS);
+	//Little hack to reevaluate Evaluation Conditions	
+	_shared_mutex.rSharedUnlock();	
+	stopReaders(readers_vector);
 	return ret;
 };
 
@@ -331,6 +359,7 @@ bool testExclusiveAccess() {
 int main() {
 
 	bool passed;
+
 	std::cout<<"Test Xclusive Access: "<<std::endl;
 	passed = testExclusiveAccess();	
 	std::cout<<"Passed: "<<std::boolalpha<<passed<<std::endl;
@@ -361,6 +390,10 @@ int main() {
 
 	std::cout<<"Test Limit Readers: "<<std::endl;
 	passed = testLimitReaders(20);
+	std::cout<<"Passed: "<<std::boolalpha<< passed<<std::endl;
+
+	std::cout<<"Test Future Readers Block Writers: "<<std::endl;
+	passed = testFutureReadersBlocksWriter();
 	std::cout<<"Passed: "<<std::boolalpha<< passed<<std::endl;
 
 	testRoundRobin();	

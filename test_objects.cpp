@@ -119,8 +119,9 @@ void Reader::continousRead(){
 
 size_t Reader::punctualRead(uint8_t* buffer, size_t size){
 	_mutex->rSharedLock();
-	_memory_space->read(buffer, size);
+	size_t ret = _memory_space->read(buffer, size);
 	_mutex->rSharedUnlock();
+	return ret;
 };
 
 /*
