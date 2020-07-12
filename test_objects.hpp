@@ -4,7 +4,7 @@
 
 #pragma once
 
-class SharedMutex;
+class SharedLock;
 
 class MemorySpace {
 	public:
@@ -47,14 +47,14 @@ Test class to Read Access
 
 class Reader {
 	public:
-	Reader(SharedMutex* shared_mutex);
+	Reader(SharedLock* shared_lock);
 	void readContinously();
 	size_t punctualRead(uint8_t* buffer, size_t lenght);
 	void stop();
 	private:
 	static uint32_t _SLEEP;
 	MemorySpace* _memory_space;
-	SharedMutex* _mutex;
+	SharedLock* _lock;
 	bool _out;
 	std::thread* _thread;
 	uint32_t _thread_uid;
@@ -66,7 +66,7 @@ Test class to Write Access
 */
 class Writer {
 	public:
-	Writer(SharedMutex* shared_mutex);
+	Writer(SharedLock* shared_lock);
 	void setDataGenerator(DataGenerator* data_generator);
 	void stop();
 	void writeContinously();
@@ -74,7 +74,7 @@ class Writer {
 	static uint32_t _SLEEP;
 	DataGenerator* _data_generator;
 	MemorySpace* _memory_space;
-	SharedMutex* _mutex;
+	SharedLock* _lock;
 	bool _out;
 	std::thread* _thread;
 	uint32_t _thread_uid;

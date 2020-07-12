@@ -17,10 +17,10 @@ enum class PreferencePolicy {
 };
 
 
-class SharedMutex {
+class SharedLock {
 	public:
-	SharedMutex(PreferencePolicy policy);
-	~SharedMutex(){};
+	SharedLock(PreferencePolicy policy);
+	~SharedLock(){};
 	
 	//exclusive Access
 	void exclusiveLock();
@@ -58,18 +58,18 @@ class SharedMutex {
 	//
 	//Also for Round Robin
 	std::thread::id getActualTurn();
-	typedef std::function<bool(SharedMutex*)> f_policy;
-	static SharedMutex::f_policy getReadPolicy(PreferencePolicy policy);
-	static SharedMutex::f_policy getWritePolicy(PreferencePolicy policy);
+	typedef std::function<bool(SharedLock*)> f_policy;
+	static SharedLock::f_policy getReadPolicy(PreferencePolicy policy);
+	static SharedLock::f_policy getWritePolicy(PreferencePolicy policy);
 	static int32_t _limit_readers;
 	bool _checkThreadRunnable();
 	std::condition_variable _cv;
 	bool _exclusive_acquired;
-	SharedMutex::f_policy _read_policy;
-	SharedMutex::f_policy _write_policy;
-	std::mutex _mutex;
-	std::mutex _try_mutex;
-	std::mutex _register_mutex;
+	SharedLock::f_policy _read_policy;
+	SharedLock::f_policy _write_policy;
+	std::mutex _lock;
+	std::mutex _try_lock;
+	std::mutex _register_lock;
 	std::vector<std::thread::id> _round_robin_turn;
 	//We save actual threads ID to avoid thread lock reuse which cause deadlock
 	std::set<std::thread::id> _threads_running;

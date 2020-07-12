@@ -4,11 +4,11 @@
 #include <unistd.h>
 #include <vector>
 #include "test_objects.hpp"
-#include "shared_mutex.hpp"
+#include "shared_lock.hpp"
 
-std::vector<Writer*>& createNWriters(SharedMutex& shared_mutex, uint16_t n) {
+std::vector<Writer*>& createNWriters(SharedLock& shared_lock, uint16_t n) {
 	std::vector<Writer*>* w_vector = new std::vector<Writer*>(n);  
-	for(uint8_t index = 0; index < n; index++) w_vector->operator[](index) = new Writer(&shared_mutex);
+	for(uint8_t index = 0; index < n; index++) w_vector->operator[](index) = new Writer(&shared_lock);
 	return *w_vector;
 };
 
@@ -22,9 +22,9 @@ void stopWriters(std::vector<Writer*>& writers) {
 };
 
 
-std::vector<Reader*>& createNReaders(SharedMutex& shared_mutex, uint16_t n) {
+std::vector<Reader*>& createNReaders(SharedLock& shared_lock, uint16_t n) {
 	std::vector<Reader*>* r_vector = new std::vector<Reader*>(n);  
-	for(uint8_t index = 0; index<n; index++) r_vector->operator[](index) = new Reader(&shared_mutex);
+	for(uint8_t index = 0; index<n; index++) r_vector->operator[](index) = new Reader(&shared_lock);
 	return *r_vector;
 };
 
@@ -39,11 +39,11 @@ void stopReaders(std::vector<Reader*>& readers) {
 
 
 void testSimpleWriters() {
-	SharedMutex _shared_mutex(PreferencePolicy::ROUNDROBIN);
-	auto writers_vector = createNWriters(_shared_mutex, 9);
+	SharedLock _shared_lock(PreferencePolicy::ROUNDROBIN);
+	auto writers_vector = createNWriters(_shared_lock, 9);
 	startWriters(writers_vector);
 	for(uint16_t index = 0; index < 500; index++) {
-		std::cout<<"Number of Writers: " << _shared_mutex.getNumberWriters() << std::endl;
+		std::cout<<"Number of Writers: " << _shared_lock.getNumberWriters() << std::endl;
 		usleep(10*1000);	
 	}
 	stopWriters(writers_vector);
@@ -53,8 +53,8 @@ void testRoundRobin() {
 
 	auto memory = get_memory_space();
 	memory->restartMemory();
-	SharedMutex _shared_mutex(PreferencePolicy::ROUNDROBIN);
-	auto writers_vector = createNWriters(_shared_mutex, 5);
+	SharedLock _shared_lock(PreferencePolicy::ROUNDROBIN);
+	auto writers_vector = createNWriters(_shared_lock, 5);
 	writers_vector.operator[](1)->setDataGenerator(new CharDataGenerator('b'));
 	writers_vector.operator[](2)->setDataGenerator(new CharDataGenerator('c'));
 	writers_vector.operator[](3)->setDataGenerator(new CharDataGenerator('d'));
@@ -73,20 +73,20 @@ bool testNonePrevalenceNoExclusive() {
 	Test OK: Only One writer with 0 readers
 	*/	
 	bool ret = true;
-	SharedMutex _shared_mutex(PreferencePolicy::NONE);
-	auto writers_vector = createNWriters(_shared_mutex, 4);
-	auto readers_vector = createNReaders(_shared_mutex, 4);
+	SharedLock _shared_lock(PreferencePolicy::NONE);
+	auto writers_vector = createNWriters(_shared_lock, 4);
+	auto readers_vector = createNReaders(_shared_lock, 4);
 	startWriters(writers_vector);
 	startReaders(readers_vector);
 	for(uint16_t index = 0; index < 20; index++) {
-		if(_shared_mutex.wTrySharedLock(100) == true) {
+		if(_shared_lock.wTrySharedLock(100) == true) {
 			//Wait until all Writer threads stops				
-			if(_shared_mutex.getNumberWriters() > 1 || _shared_mutex.getNumberReaders() > 0) {
-				std::cout<<"\tAcquiring lock when Unable: Writers: "<<_shared_mutex.getNumberWriters()<<std::endl;			
+			if(_shared_lock.getNumberWriters() > 1 || _shared_lock.getNumberReaders() > 0) {
+				std::cout<<"\tAcquiring lock when Unable: Writers: "<<_shared_lock.getNumberWriters()<<std::endl;			
 				ret = false;
 			}
-			else std::cout<<"\tNumber of Writers: "<<_shared_mutex.getNumberWriters()<<" Number of readers: "<<_shared_mutex.getNumberReaders()<<std::endl;
-			_shared_mutex.wSharedUnlock();
+			else std::cout<<"\tNumber of Writers: "<<_shared_lock.getNumberWriters()<<" Number of readers: "<<_shared_lock.getNumberReaders()<<std::endl;
+			_shared_lock.wSharedUnlock();
 		}
 		usleep(1*(500000));
 	}
@@ -102,22 +102,22 @@ bool testReadPrevalenceNoExclusive() {
 	Test OK: No writers should be running when Read acquire Lock
 	*/	
 	bool ret = true;
-	SharedMutex _shared_mutex(PreferencePolicy::READER);
-	auto writers_vector = createNWriters(_shared_mutex, 3);
-	auto readers_vector = createNReaders(_shared_mutex, 20);
+	SharedLock _shared_lock(PreferencePolicy::READER);
+	auto writers_vector = createNWriters(_shared_lock, 3);
+	auto readers_vector = createNReaders(_shared_lock, 20);
 	startWriters(writers_vector);
 	startReaders(readers_vector);
 	usleep(1*1000000);
 	for(uint16_t index = 0; index < 20; index++) {
-		if(_shared_mutex.rTrySharedLock(100) == true) {
+		if(_shared_lock.rTrySharedLock(100) == true) {
 			//Wait until all Writer threads stops			
 			usleep(10*(1000));	
-			if(_shared_mutex.getNumberWriters() > 0) {
-				std::cout<<"\tAcquiring lock when Unable: Writers: "<<_shared_mutex.getNumberWriters()<<std::endl;
+			if(_shared_lock.getNumberWriters() > 0) {
+				std::cout<<"\tAcquiring lock when Unable: Writers: "<<_shared_lock.getNumberWriters()<<std::endl;
 				ret = false;
 			}
-			else std::cout<<"\tAcquiring lock when Able: Writers: "<<_shared_mutex.getNumberWriters()<<" Readers: "<< _shared_mutex.getNumberReaders()<<std::endl;
-			_shared_mutex.rSharedUnlock();
+			else std::cout<<"\tAcquiring lock when Able: Writers: "<<_shared_lock.getNumberWriters()<<" Readers: "<< _shared_lock.getNumberReaders()<<std::endl;
+			_shared_lock.rSharedUnlock();
 		}
 		usleep(1*(100000));
 	}
@@ -134,30 +134,30 @@ bool testWritePrevalenceNoExclusive() {
 	Test OK: If we get Lock but only one reader
 	*/
 	bool ret = true;
-	SharedMutex _shared_mutex(PreferencePolicy::WRITER);
-	auto writers_vector = createNWriters(_shared_mutex, 9);
-	Reader reader_1(&_shared_mutex);
+	SharedLock _shared_lock(PreferencePolicy::WRITER);
+	auto writers_vector = createNWriters(_shared_lock, 9);
+	Reader reader_1(&_shared_lock);
 	startWriters(writers_vector);
 	reader_1.readContinously();
 	for(uint16_t index = 0; index < 20; index++) {
-		if(_shared_mutex.rTrySharedLock(100) == true) {		
-			if(_shared_mutex.getNumberReaders() > 1 and _shared_mutex.getNumberWriters() != 0) {
+		if(_shared_lock.rTrySharedLock(100) == true) {		
+			if(_shared_lock.getNumberReaders() > 1 and _shared_lock.getNumberWriters() != 0) {
 				std::cout<<"\tAcquiring lock when Unable"<<std::endl;			
 				ret = false;
 			}
-			else std::cout<<"\tLock acquired but: "<<"Writers: "<<_shared_mutex.getNumberWriters()
-								<<" Readers: "<< _shared_mutex.getNumberReaders()<<std::endl;			
-			_shared_mutex.rSharedUnlock();
+			else std::cout<<"\tLock acquired but: "<<"Writers: "<<_shared_lock.getNumberWriters()
+								<<" Readers: "<< _shared_lock.getNumberReaders()<<std::endl;			
+			_shared_lock.rSharedUnlock();
 			usleep(1*(500000));// 0.5 seconds
 		}
 	}
 	stopWriters(writers_vector);
 	for(uint16_t index = 0; index < 50; index++) {
-		if(_shared_mutex.rTrySharedLock(100) == false) {
+		if(_shared_lock.rTrySharedLock(100) == false) {
 			std::cout<<"\tNot Acquiring lock when able"<<std::endl;		
 			ret = false;
 		}
-		else _shared_mutex.rSharedUnlock();
+		else _shared_lock.rSharedUnlock();
 		usleep(1*(1000));	
 	}
 	reader_1.stop();
@@ -173,8 +173,8 @@ bool testExclusiveThread() {
 	auto memory = get_memory_space();
 	memory->restartMemory();
 	bool ret = true;
-	SharedMutex _shared_mutex(PreferencePolicy::WRITER);
-	auto writers_vector = createNWriters(_shared_mutex, 9);
+	SharedLock _shared_lock(PreferencePolicy::WRITER);
+	auto writers_vector = createNWriters(_shared_lock, 9);
 	startWriters(writers_vector);
 	uint32_t value = memory->getSize();		
 	usleep(1*1000000);
@@ -185,7 +185,7 @@ bool testExclusiveThread() {
 		value = new_value;
 		usleep(1*1000000);
 	}
-	if(_shared_mutex.tryExclusiveLock(1000) == true) {
+	if(_shared_lock.tryExclusiveLock(1000) == true) {
 		std::cout<<"\tExclusive lock acquired! "<<std::endl;
 		uint32_t value = memory->getSize();	
 		for(uint16_t index = 0; index < 10; index++) {
@@ -194,7 +194,7 @@ bool testExclusiveThread() {
 			if(new_value != value) ret = false;			
 			usleep(1*1000000);
 		}
-		_shared_mutex.exclusiveUnlock();
+		_shared_lock.exclusiveUnlock();
 		std::cout<<"\tExclusive lock released! "<<std::endl;
 	}
 	value = memory->getSize();	
@@ -212,44 +212,44 @@ bool testExclusiveThread() {
 
 bool testLimitReaders(uint32_t limit_readers) {
 	bool ret = true;
-	SharedMutex _shared_mutex(PreferencePolicy::NONE);
-	SharedMutex::setLimitReaders(limit_readers);
-	auto readers_vector = createNReaders(_shared_mutex, 50);
+	SharedLock _shared_lock(PreferencePolicy::NONE);
+	SharedLock::setLimitReaders(limit_readers);
+	auto readers_vector = createNReaders(_shared_lock, 50);
 	startReaders(readers_vector);
 	usleep(1*1000000);//1 Second
 	for(uint16_t index = 0; index < 10; index++) {
-		std::cout<<"\tReaders: "<<_shared_mutex.getNumberReaders()<<" Future Readers: "<< _shared_mutex.getNumberFutureReaders()<<std::endl;
+		std::cout<<"\tReaders: "<<_shared_lock.getNumberReaders()<<" Future Readers: "<< _shared_lock.getNumberFutureReaders()<<std::endl;
 		usleep(1*1000000);//1 Second
-		if(_shared_mutex.getNumberReaders() > limit_readers) ret = false;
+		if(_shared_lock.getNumberReaders() > limit_readers) ret = false;
 	}
 	stopReaders(readers_vector);
-	SharedMutex::setLimitReaders(0);
+	SharedLock::setLimitReaders(0);
 	return ret;
 };
 
 bool testFutureReadersBlocksWriter() {
 	bool ret = true;
-	SharedMutex _shared_mutex(PreferencePolicy::READER);
+	SharedLock _shared_lock(PreferencePolicy::READER);
 	//Create a bottleneck. With lots of waiting readers
-	SharedMutex::setLimitReaders(0);
-	auto readers_vector = createNReaders(_shared_mutex, 1);
+	SharedLock::setLimitReaders(0);
+	auto readers_vector = createNReaders(_shared_lock, 1);
 	startReaders(readers_vector);
 	usleep(1*1000000);//1 Second
 	for(uint16_t index = 0; index < 20; index++) {
-		if(_shared_mutex.wTrySharedLock() == true) {
+		if(_shared_lock.wTrySharedLock() == true) {
 			ret = false;				
-			std::cout<<"\tAcquiring lock when Unable: "<<" Number of readers: "<<_shared_mutex.getNumberReaders()
-				<<" Future Readers: " << _shared_mutex.getNumberFutureReaders() <<std::endl;
-			_shared_mutex.wSharedUnlock();
+			std::cout<<"\tAcquiring lock when Unable: "<<" Number of readers: "<<_shared_lock.getNumberReaders()
+				<<" Future Readers: " << _shared_lock.getNumberFutureReaders() <<std::endl;
+			_shared_lock.wSharedUnlock();
 		}
 		else 
-			std::cout<<"\tNot Acquiring: "<<" Number of readers: "<<_shared_mutex.getNumberReaders()
-				<<" Future Readers: " << _shared_mutex.getNumberFutureReaders() <<std::endl;
+			std::cout<<"\tNot Acquiring: "<<" Number of readers: "<<_shared_lock.getNumberReaders()
+				<<" Future Readers: " << _shared_lock.getNumberFutureReaders() <<std::endl;
 		usleep(1*(500000)); // 1/2 Sec
 	}
-	SharedMutex::setLimitReaders(SharedMutex::NO_LIMIT_READERS);
+	SharedLock::setLimitReaders(SharedLock::NO_LIMIT_READERS);
 	//Little hack to reevaluate Evaluation Conditions	
-	_shared_mutex.rSharedUnlock();	
+	_shared_lock.rSharedUnlock();	
 	stopReaders(readers_vector);
 	return ret;
 };
@@ -259,32 +259,32 @@ bool testReadAccess() {
 	Test same Read thread trying to acquire twice the same lock
 	*/
 	bool ret = false;
-	SharedMutex _shared_mutex(PreferencePolicy::NONE);
-	_shared_mutex.rSharedLock();
-	_shared_mutex.rSharedUnlock();
-	_shared_mutex.rSharedLock();	
+	SharedLock _shared_lock(PreferencePolicy::NONE);
+	_shared_lock.rSharedLock();
+	_shared_lock.rSharedUnlock();
+	_shared_lock.rSharedLock();	
 	try {
-		_shared_mutex.exclusiveLock();
+		_shared_lock.exclusiveLock();
 		ret = false;
 	}
 	catch (...) {
 		ret = true;
 	}
 	try {
-		_shared_mutex.rSharedLock();
+		_shared_lock.rSharedLock();
 		ret = false;
 	}
 	catch (...) {
 		ret = true;
 	}
 	try {
-		_shared_mutex.wSharedLock();
+		_shared_lock.wSharedLock();
 		ret = false;
 	}
 	catch (...) {
 		ret = true;
 	}
-	_shared_mutex.rSharedUnlock();
+	_shared_lock.rSharedUnlock();
 	return ret;
 };
 
@@ -293,32 +293,32 @@ bool testWriteAccess() {
 	Test same Write thread trying to acquire twice the same lock
 	*/
 	bool ret = false;
-	SharedMutex _shared_mutex(PreferencePolicy::NONE);
-	_shared_mutex.wSharedLock();
-	_shared_mutex.wSharedUnlock();
-	_shared_mutex.wSharedLock();	
+	SharedLock _shared_lock(PreferencePolicy::NONE);
+	_shared_lock.wSharedLock();
+	_shared_lock.wSharedUnlock();
+	_shared_lock.wSharedLock();	
 	try {
-		_shared_mutex.exclusiveLock();
+		_shared_lock.exclusiveLock();
 		ret = false;
 	}
 	catch (...) {
 		ret = true;
 	}
 	try {
-		_shared_mutex.rSharedLock();
+		_shared_lock.rSharedLock();
 		ret = false;
 	}
 	catch (...) {
 		ret = true;
 	}
 	try {
-		_shared_mutex.wSharedLock();
+		_shared_lock.wSharedLock();
 		ret = false;
 	}
 	catch (...) {
 		ret = true;
 	}
-	_shared_mutex.wSharedUnlock();
+	_shared_lock.wSharedUnlock();
 	return ret;
 };
 
@@ -327,32 +327,32 @@ bool testExclusiveAccess() {
 	Test same Exclusive thread trying to acquire twice the same lock
 	*/
 	bool ret = false;
-	SharedMutex _shared_mutex(PreferencePolicy::NONE);
-	_shared_mutex.exclusiveLock();
-	_shared_mutex.exclusiveUnlock();
-	_shared_mutex.exclusiveLock();	
+	SharedLock _shared_lock(PreferencePolicy::NONE);
+	_shared_lock.exclusiveLock();
+	_shared_lock.exclusiveUnlock();
+	_shared_lock.exclusiveLock();	
 	try {
-		_shared_mutex.exclusiveLock();
+		_shared_lock.exclusiveLock();
 		ret = false;
 	}
 	catch (...) {
 		ret = true;
 	}
 	try {
-		_shared_mutex.rSharedLock();
+		_shared_lock.rSharedLock();
 		ret = false;
 	}
 	catch (...) {
 		ret = true;
 	}
 	try {
-		_shared_mutex.wSharedLock();
+		_shared_lock.wSharedLock();
 		ret = false;
 	}
 	catch (...) {
 		ret = true;
 	}
-	_shared_mutex.exclusiveUnlock();
+	_shared_lock.exclusiveUnlock();
 	return ret;
 };
 

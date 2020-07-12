@@ -6,7 +6,7 @@
 #include <thread>
 #include <unistd.h>
 #include "test_objects.hpp"
-#include "shared_mutex.hpp"
+#include "shared_lock.hpp"
 
 uint32_t MemorySpace::DEFAULT_SIZE = 1024*10000; //100 k
 
@@ -89,7 +89,7 @@ READER
 */
 uint32_t Reader::_SLEEP = 1*1000;
 
-Reader::Reader(SharedMutex* shared_mutex): _mutex(shared_mutex), _out(false){
+Reader::Reader(SharedLock* shared_lock): _lock(shared_lock), _out(false){
 	_memory_space = get_memory_space();
 };
 
@@ -105,22 +105,22 @@ void Reader::stop() {
 };
 
 void Reader::continousRead(){
-	_mutex->registerThread();
+	_lock->registerThread();
 	while(!_out) {
-		_mutex->rSharedLock();
+		_lock->rSharedLock();
 		size_t size = _memory_space->getSize();
 		uint8_t* buffer = new uint8_t[size];		
 		_memory_space->read(buffer, size);
-		_mutex->rSharedUnlock();
+		_lock->rSharedUnlock();
 		usleep(Reader::_SLEEP);
 	}
-	_mutex->unregisterThread();
+	_lock->unregisterThread();
 };
 
 size_t Reader::punctualRead(uint8_t* buffer, size_t size){
-	_mutex->rSharedLock();
+	_lock->rSharedLock();
 	size_t ret = _memory_space->read(buffer, size);
-	_mutex->rSharedUnlock();
+	_lock->rSharedUnlock();
 	return ret;
 };
 
@@ -129,7 +129,7 @@ WRITER
 */
 uint32_t Writer::_SLEEP = 5*1000;
 
-Writer::Writer(SharedMutex* shared_mutex): _mutex(shared_mutex), _out (false){
+Writer::Writer(SharedLock* shared_lock): _lock(shared_lock), _out (false){
 	_data_generator = new CharDataGenerator('a');
 	_memory_space = get_memory_space();
 	_thread = NULL;
@@ -155,15 +155,15 @@ void Writer::writeContinously() {
 
 void Writer::continousWrite(){
 	uint8_t* buffer = new uint8_t[15];
-	_mutex->registerThread();	
+	_lock->registerThread();	
 	while(!_out) {
 		size_t size = _data_generator->getData(buffer);
 		//std::cout<<"Writing: "<< buffer<<std::endl;
-		_mutex->wSharedLock();
+		_lock->wSharedLock();
 		_memory_space->write(buffer, size);
-		_mutex->wSharedUnlock();
+		_lock->wSharedUnlock();
 		usleep(Writer::_SLEEP);
 	}
-	_mutex->unregisterThread();	
+	_lock->unregisterThread();	
 	delete[] buffer;
 };
