@@ -21,7 +21,7 @@ class MemorySpace {
 	static uint32_t _WSLEEP;
 	uint32_t _max_size;
 	uint8_t* _memory_space;
-	std::mutex _mutex;
+	mutable std::mutex _mutex;
 	uint32_t _rw_position;
 };
 
@@ -45,6 +45,18 @@ class CharDataGenerator: public DataGenerator {
 Test class to Read Access
 */
 
+class RWOut {
+	public:
+	RWOut();
+	~RWOut();
+	void reset();	
+	void set();
+	bool status();
+	private:
+	bool _out;
+	std::mutex _lock;
+};
+
 class Reader {
 	public:
 	Reader(SharedLock* shared_lock);
@@ -55,7 +67,7 @@ class Reader {
 	static uint32_t _SLEEP;
 	MemorySpace* _memory_space;
 	SharedLock* _lock;
-	bool _out;
+	RWOut _out;
 	std::thread* _thread;
 	uint32_t _thread_uid;
 	void continousRead();
@@ -75,7 +87,7 @@ class Writer {
 	DataGenerator* _data_generator;
 	MemorySpace* _memory_space;
 	SharedLock* _lock;
-	bool _out;
+	RWOut _out;
 	std::thread* _thread;
 	uint32_t _thread_uid;
 	void continousWrite();

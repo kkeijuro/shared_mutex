@@ -40,16 +40,24 @@ class SharedLock {
 	bool wTrySharedLock(uint16_t timeout);
 	void wSharedUnlock();
 
-	uint32_t getNumberWriters() const;
-	uint32_t getNumberReaders() const;
-	uint32_t getNumberFutureReaders() const;
+	int32_t getNumberWriters() const;
+	int32_t getNumberReaders() const;
+	int32_t getNumberFutureReaders() const;
 
+	void lockReaders();
+	void lockWriters();
+	void lockShared();
+	void unlockReaders();
+	void unlockWriters();
+	void unlockShared();
 	//Just wanted to test a Round Robin
 	void registerThread();
 	void unregisterThread();
+	void notify();
 	//void rSharedLock(uint32_t thread_id);
 	//void wSharedLock(uint32_t thread_id);
-	static void setLimitReaders(int32_t limit_readers);	
+	static void setLimitReaders(int32_t limit_readers);
+	static int32_t getLimitReaders();	
 	static const int32_t NO_LIMIT_READERS;
 	private:
 	//void sharedLock(){};
@@ -58,22 +66,26 @@ class SharedLock {
 	//
 	//Also for Round Robin
 	std::thread::id getActualTurn();
+	bool _checkThreadRunnable();
+
 	typedef std::function<bool(SharedLock*)> f_policy;
 	static SharedLock::f_policy getReadPolicy(PreferencePolicy policy);
 	static SharedLock::f_policy getWritePolicy(PreferencePolicy policy);
+	static std::mutex _static_lock;
 	static int32_t _limit_readers;
-	bool _checkThreadRunnable();
 	std::condition_variable _cv;
 	bool _exclusive_acquired;
-	SharedLock::f_policy _read_policy;
-	SharedLock::f_policy _write_policy;
-	std::mutex _lock;
-	std::mutex _try_lock;
-	std::mutex _register_lock;
+	bool _exclusive_asked;
+	int32_t _future_readers;
+	bool _locked_readers;
+	bool _locked_writers;
+	mutable std::mutex _lock;
+	SharedLock::f_policy _policy_read;
+	SharedLock::f_policy _policy_write;
+	std::mutex _t_lock;
 	std::vector<std::thread::id> _round_robin_turn;
 	//We save actual threads ID to avoid thread lock reuse which cause deadlock
 	std::set<std::thread::id> _threads_running;
-	int32_t _future_readers;
 	int32_t _readers;
 	int32_t _turn;
 	int32_t _writers;
