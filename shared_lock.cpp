@@ -234,7 +234,7 @@ void SharedLock::rSharedLock(){
 	_threads_running.insert(std::this_thread::get_id());
 	_readers++;
 	_future_readers--;
-	std::unique_lock<std::mutex> turn_lk(_t_lock);
+	//std::unique_lock<std::mutex> turn_lk(_t_lock);
 	_turn++;
 	if(_turn >= _round_robin_turn.size()) _turn = 0;
 };
@@ -269,7 +269,7 @@ void SharedLock::wSharedLock(){
 	_cv.wait(lk, [this] {return _policy_write(this);});
 	_threads_running.insert(std::this_thread::get_id());	
 	_writers++;
-	std::unique_lock<std::mutex> turn_lk(_t_lock);	
+	//std::unique_lock<std::mutex> turn_lk(_t_lock);	
 	_turn++;
 	if(_turn >= _round_robin_turn.size()) _turn = 0;
 };
@@ -302,17 +302,16 @@ void SharedLock::notify(){
 
 /*Just for ROUND ROBIN*/
 std::thread::id SharedLock::getActualTurn(){
-	std::unique_lock<std::mutex> lk(_t_lock);
 	return _round_robin_turn.operator[](_turn);
 };
 
 void SharedLock::registerThread(){
-	std::unique_lock<std::mutex> lk(_t_lock);
+	std::unique_lock<std::mutex> lk(_lock);
 	_round_robin_turn.push_back(std::this_thread::get_id());
 };
 
 void SharedLock::unregisterThread(){
-	std::unique_lock<std::mutex> lk(_t_lock);
+	std::unique_lock<std::mutex> lk(_lock);
 	_round_robin_turn.erase(std::remove(_round_robin_turn.begin(), _round_robin_turn.end(), std::this_thread::get_id()), _round_robin_turn.end());
 	//Avoid loosing order when a element is removed	
 	_turn--;
